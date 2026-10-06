@@ -1,0 +1,100 @@
+spring:
+  application:
+    name: investment-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+  cloud:
+    function:
+      definition: processInvoiceEligibleForFunding;projectAuctionMarketplace
+    stream:
+      bindings:
+        auctionLifecycle-out-0:
+          destination: investment.auction-lifecycle.v1
+          content-type: application/json
+        projectAuctionMarketplace-in-0:
+          destination: investment.auction-lifecycle.v1
+          group: investment-marketplace-v1
+          content-type: application/json
+          consumer:
+            max-attempts: 3
+      kafka:
+        binder:
+          auto-create-topics: false
+          producer-properties:
+            acks: all
+            enable.idempotence: true
+        bindings:
+          auctionLifecycle-out-0:
+            producer:
+              sync: true
+              configuration:
+                # OutboxPublisher pone el aggregateId, que es un String, en
+                # KafkaHeaders.KEY. El payload viaja como byte[], así que el binder
+                # elegía ByteArraySerializer para las dos mitades del mensaje y cada
+                # envío moría en un ClassCastException: la proyección del Marketplace
+                # no recibía nada y la búsqueda quedaba vacía para siempre.
+                # Va en este binding y no en producer-properties del binder para no
+                # imponerle el serializador a cualquier productor que se añada luego.
+                key.serializer: org.apache.kafka.common.serialization.StringSerializer
+          projectAuctionMarketplace-in-0:
+            consumer:
+              enable-dlq: true
+              dlq-name: investment.auction-lifecycle.v1.dlq
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+      naming:
+        physical-strategy: com.liquilabs.vankoo.investment.infrastructure.persistence.jpa.configuration.strategy.SnakeCaseWithPluralizedTablePhysicalNamingStrategy
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+documentation:
+  application:
+    title: @project.name@
+    description: @project.description@
+    version: @project.version@
+
+authorization:
+  jwt:
+    secret: ${JWT_SECRET:default_secret_for_local_dev}
+    expiration:
+      days: ${JWT_EXPIRATION_DAYS}
+
+scalar:
+  enabled: true
+  theme: kepler
+
+vankoo:
+  investment:
+    # TEMPORAL: sustituye al servicio de riesgo, que no existe todavía. Califica cada subasta
+    # nueva con una nota derivada de su id. Ver docs/SIMULATED_RISK_EVALUATION.md.
+    risk-simulation:
+      enabled: ${INVESTMENT_RISK_SIMULATION_ENABLED:false}
+    pricing:
+      version: ${INVESTMENT_PRICING_VERSION:demo-2026-09}
+      zone-id: ${INVESTMENT_PRICING_ZONE:America/Lima}
+      day-count-basis: ${INVESTMENT_DAY_COUNT_BASIS:360}
+      quote-validity: ${INVESTMENT_QUOTE_VALIDITY:PT24H}
+      funding-window: ${INVESTMENT_FUNDING_WINDOW:P7D}
+      settlement-buffer: ${INVESTMENT_SETTLEMENT_BUFFER:P1D}
+      platform-monthly-fee-rate: ${INVESTMENT_PLATFORM_MONTHLY_FEE_RATE:0.003}
+      platform-fee-tax-rate: ${INVESTMENT_PLATFORM_FEE_TAX_RATE:0.18}
+      investor-tea:
+        A: ${INVESTMENT_TEA_A:0.12}
+        B: ${INVESTMENT_TEA_B:0.15}
+        C: ${INVESTMENT_TEA_C:0.18}
+      minimum-investment:
+        PEN: ${INVESTMENT_MINIMUM_PEN:50.00}
+        USD: ${INVESTMENT_MINIMUM_USD:15.00}
+    lifecycle:
+      expiration-check-delay: ${INVESTMENT_EXPIRATION_CHECK_DELAY:PT1M}
+    outbox:
+      publish-delay: ${INVESTMENT_OUTBOX_PUBLISH_DELAY:PT1S}
+      cleanup-delay: ${INVESTMENT_OUTBOX_CLEANUP_DELAY:PT1H}
+      batch-size: ${INVESTMENT_OUTBOX_BATCH_SIZE:50}
+      published-retention: ${INVESTMENT_OUTBOX_PUBLISHED_RETENTION:P7D}

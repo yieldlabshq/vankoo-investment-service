@@ -1,0 +1,61 @@
+server:
+  port: 8082 # El puerto interno del contenedor
+
+spring:
+  datasource:
+    # Dentro de Docker, el host es el nombre del servicio de la BD en el compose
+    url: jdbc:oracle:thin:@${INVESTMENT_DB_HOST:investment-db-oracle}:${INVESTMENT_DB_PORT:1521}/${INVESTMENT_DB_NAME:FREEPDB1}
+    username: ${INVESTMENT_DB_USER:vankoo_investment}
+    password: ${INVESTMENT_DB_PASSWORD:password}
+  cloud:
+    stream:
+      kafka:
+        binder:
+          # Dentro de Docker, Kafka se ve a través del puerto 9094 (INTERNAL)
+          brokers: ${KAFKA_HOST:kafka-broker}:${KAFKA_INTERNAL_PORT:9094}
+          auto-create-topics: true
+          producer-properties:
+            acks: all
+            retries: 3
+            enable.idempotence: true
+      bindings:
+        processInvoiceEligibleForFunding-in-0:
+          destination: invoicing.invoice-eligible-for-funding
+          group: investment-service-group
+          content-type: application/json
+          consumer:
+            max-attempts: 3
+
+eureka:
+  instance:
+    # Usamos el nombre que le daremos al servicio en el docker-compose
+    hostname: ${INVESTMENT_SERVICE_HOST:investment-service}
+    prefer-ip-address: true # CRÍTICO para comunicación entre contenedores
+  client:
+    enabled: true
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${DISCOVERY_SERVER_URL:http://discovery-server:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # En Docker, es útil exponer todos los endpoints de gestión para monitoreo y debugging
+        # Ya que la red es interna, no hay riesgo de exponer información sensible al exterior
+        include: "*"
+
+documentation:
+  # Son URLs para el navegador de quien lee la documentación, no para los contenedores:
+  # por eso apuntan a los puertos publicados en el host.
+  local-url: http://${INVESTMENT_DOCUMENTATION_SERVER_URL:localhost}:${INVESTMENT_SERVICE_PORT:8082}
+  gateway-url: http://${INVESTMENT_DOCUMENTATION_GATEWAY_URL:localhost}:${API_GATEWAY_PORT:8080}/investment
+
+vankoo:
+  investment:
+    # TEMPORAL: encendida en el compose para que la demo llegue al marketplace sin servicio de
+    # riesgo. Apágala con INVESTMENT_RISK_SIMULATION_ENABLED=false donde haga falta evaluar a
+    # mano. Ver docs/SIMULATED_RISK_EVALUATION.md.
+    risk-simulation:
+      enabled: ${INVESTMENT_RISK_SIMULATION_ENABLED:true}
