@@ -1,0 +1,304 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vankoo.pe/contracts/investment/auction-lifecycle/v1/auction-lifecycle-event.schema.json",
+  "title": "Auction lifecycle integration event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "eventType",
+    "schemaVersion",
+    "aggregateId",
+    "sequence",
+    "occurredAt",
+    "data"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "AuctionCreated",
+        "AuctionPublished",
+        "PartitionAdded",
+        "AuctionFullyFunded",
+        "AuctionExpired",
+        "AuctionCancelled",
+        "AuctionClosed"
+      ]
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "aggregateId": {
+      "$ref": "#/$defs/id"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "data": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "AuctionCreated"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/auctionCreatedData"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "AuctionPublished"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/auctionPublishedData"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "PartitionAdded"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/partitionAddedData"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "AuctionFullyFunded"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/auctionFullyFundedData"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "AuctionExpired"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/auctionExpiredData"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "AuctionCancelled"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/auctionCancelledData"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "const": "AuctionClosed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/auctionClosedData"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "currency": {
+      "type": "string",
+      "enum": ["PEN", "USD"]
+    },
+    "money": {
+      "type": "number",
+      "minimum": 0,
+      "multipleOf": 0.01
+    },
+    "rate": {
+      "type": "number",
+      "minimum": 0
+    },
+    "releasedTransactionIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "auctionCreatedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "invoiceId",
+        "mypeId",
+        "payerRuc",
+        "payerName",
+        "dueDate",
+        "invoiceAmount",
+        "currency",
+        "status",
+        "greenCertified"
+      ],
+      "properties": {
+        "invoiceId": { "$ref": "#/$defs/id" },
+        "mypeId": { "$ref": "#/$defs/id" },
+        "payerRuc": { "type": "string", "pattern": "^[0-9]{11}$" },
+        "payerName": { "type": "string", "minLength": 1 },
+        "dueDate": { "type": "string", "format": "date" },
+        "invoiceAmount": { "$ref": "#/$defs/money" },
+        "currency": { "$ref": "#/$defs/currency" },
+        "status": { "const": "PENDING_VERIFICATION_RISK" },
+        "greenCertified": { "type": "boolean" }
+      }
+    },
+    "auctionPublishedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "invoiceId",
+        "mypeId",
+        "payerRuc",
+        "payerName",
+        "dueDate",
+        "invoiceAmount",
+        "fundableAmount",
+        "targetAmount",
+        "currentFunding",
+        "currency",
+        "investorTea",
+        "investorTermRate",
+        "quotedTermDays",
+        "riskGrade",
+        "status",
+        "greenCertified",
+        "publishedAt",
+        "expiresAt"
+      ],
+      "properties": {
+        "invoiceId": { "$ref": "#/$defs/id" },
+        "mypeId": { "$ref": "#/$defs/id" },
+        "payerRuc": { "type": "string", "pattern": "^[0-9]{11}$" },
+        "payerName": { "type": "string", "minLength": 1 },
+        "dueDate": { "type": "string", "format": "date" },
+        "invoiceAmount": { "$ref": "#/$defs/money" },
+        "fundableAmount": { "$ref": "#/$defs/money" },
+        "targetAmount": { "$ref": "#/$defs/money" },
+        "currentFunding": { "$ref": "#/$defs/money" },
+        "currency": { "$ref": "#/$defs/currency" },
+        "investorTea": { "$ref": "#/$defs/rate" },
+        "investorTermRate": { "$ref": "#/$defs/rate" },
+        "quotedTermDays": { "type": "integer", "minimum": 1 },
+        "riskGrade": { "type": "string", "enum": ["A", "B", "C"] },
+        "status": { "const": "PUBLISHED" },
+        "greenCertified": { "type": "boolean" },
+        "publishedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "partitionAddedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["partitionId", "addedAmount", "currentFunding"],
+      "properties": {
+        "partitionId": { "$ref": "#/$defs/id" },
+        "addedAmount": { "$ref": "#/$defs/money" },
+        "currentFunding": { "$ref": "#/$defs/money" }
+      }
+    },
+    "auctionFullyFundedData": {
+      "type": "object",
+      "maxProperties": 0
+    },
+    "auctionExpiredData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["releasedInvestmentTransactionIds"],
+      "properties": {
+        "releasedInvestmentTransactionIds": {
+          "$ref": "#/$defs/releasedTransactionIds"
+        }
+      }
+    },
+    "auctionCancelledData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "releasedInvestmentTransactionIds"],
+      "properties": {
+        "reason": { "type": "string", "minLength": 1 },
+        "releasedInvestmentTransactionIds": {
+          "$ref": "#/$defs/releasedTransactionIds"
+        }
+      }
+    },
+    "auctionClosedData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["closingTransactionId"],
+      "properties": {
+        "closingTransactionId": { "$ref": "#/$defs/id" }
+      }
+    }
+  }
+}

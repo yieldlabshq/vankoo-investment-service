@@ -1,0 +1,51 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:oracle:thin:@${INVESTMENT_DB_HOST:localhost}:${INVESTMENT_DB_PORT:1521}/${INVESTMENT_DB_NAME:FREEPDB1}
+    username: ${INVESTMENT_DB_USER:vankoo_investment}
+    password: ${INVESTMENT_DB_PASSWORD:vankoo_password}
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: ${KAFKA_HOST:localhost}:${KAFKA_EXTERNAL_PORT:9092}
+          auto-create-topics: true
+          producer-properties:
+            acks: all
+            retries: 3
+            enable.idempotence: true
+      bindings:
+        processInvoiceEligibleForFunding-in-0:
+          destination: invoicing.invoice-eligible-for-funding
+          group: investment-service-group
+          content-type: application/json
+          consumer:
+            max-attempts: 3
+
+eureka:
+  instance:
+    prefer-ip-address: false
+  client:
+    enabled: false
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${DISCOVERY_SERVER_URL:http://localhost:8761/eureka/}
+management:
+  endpoints:
+    web:
+      exposure:
+       include: "health,info"
+
+documentation:
+  local-url: http://localhost:${INVESTMENT_SERVICE_PORT:8082}
+  gateway-url: http://localhost:${API_GATEWAY_PORT:8080}/investment
+
+vankoo:
+  investment:
+    # TEMPORAL: encendida en local para que las subastas lleguen al marketplace sin servicio de
+    # riesgo. Ver docs/SIMULATED_RISK_EVALUATION.md.
+    risk-simulation:
+      enabled: ${INVESTMENT_RISK_SIMULATION_ENABLED:true}
